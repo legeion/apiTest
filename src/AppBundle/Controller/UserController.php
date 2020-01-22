@@ -12,7 +12,7 @@ class UserController extends Controller
 {
     /**
      * New utilisateur
-     * @Route("/api/new", name="api_new_utilisateur", methods={"GET"})
+     * @Route("/api/new", name="api_new_utilisateur", methods={"POST"})
      */
     public function api_new_userAction(Request $request)
     {
@@ -81,19 +81,33 @@ class UserController extends Controller
                 $message='Enregistrement effectuer avec succes';
                 $logger = $this->get('logger');
                 $logger->info($message);
-                return $this->redirectToRoute('api_liste_utilisateur');
+				
+                $listeUser =$em->getRepository(User::class)->findAll();
+				$data[]=["message"=>$message];
+				foreach ($listeUser as $value){
+                    $data[]=[
+                        "Id"=>$value->getId(),
+                        "Nom"=>$value->getLastname(),
+                        "Prenom"=>$value->getFirstname(),
+                        "DateCreation"=>date_format($value->getCreationdate(),'Y-m-d H:i:s'),
+                        "DateModification"=>date_format($value->getUpdatedate(),'Y-m-d H:i:s'),
+                    ];
+				}
+				return new JsonResponse($data,200);
+
             }
-        }else{
-            $message='Erreur du formulaire';
-            $data[]=[
-                'statut'=>0,
-                'message'=>"Erreur formulaire ",
-                //'form'=>$form
-            ];
-        }
-        $logger = $this->get('logger');
-        $logger->info($message);
-        return new JsonResponse($data,200);
+		}
+			else{
+				$message='Erreur du formulaire';
+				$data[]=[
+					'statut'=>0,
+					'message'=>"Erreur formulaire ",
+					//'form'=>$form
+				];
+			}
+			$logger = $this->get('logger');
+			$logger->info($message);
+			return new JsonResponse($data,200);
     }
 
     /**
@@ -177,7 +191,19 @@ class UserController extends Controller
                 //$em->persist($user);
                 $em->flush($user);
                 $message='Modification effectuer';
-                return $this->redirectToRoute('api_liste_utilisateur');
+                
+				$data[]=["message"=>$message];
+				$listeUser =$em->getRepository(User::class)->findAll();
+				foreach ($listeUser as $value){
+                    $data[]=[
+                        "Id"=>$value->getId(),
+                        "Nom"=>$value->getLastname(),
+                        "Prenom"=>$value->getFirstname(),
+                        "DateCreation"=>date_format($value->getCreationdate(),'Y-m-d H:i:s'),
+                        "DateModification"=>date_format($value->getUpdatedate(),'Y-m-d H:i:s'),
+                    ];
+				}
+				return new JsonResponse($data,200);
 
             }
         }else{
@@ -194,13 +220,14 @@ class UserController extends Controller
 
     /**
      * New Liste
-     * @Route("/api/liste", name="api_liste_utilisateur", methods={"POST"})
+     * @Route("/", name="api_liste_utilisateur", methods={"GET"})
      */
     public function api_liste_userAction(Request $request)
     {
         $em = $this->getDoctrine()->getManager();
         $listeUser =$em->getRepository(User::class)->findAll();
         if ($listeUser!=null){
+			$data[]=["message"=>"Liste des utilisateurs"];
             foreach ($listeUser as $value){
                     $data[]=[
                         "Id"=>$value->getId(),
@@ -254,10 +281,63 @@ class UserController extends Controller
                 $em->remove($userExiste);
                 $em->flush();
                 $message='Utilisateur supprimer';
-                return $this->redirectToRoute('api_liste_utilisateur');
+                
+				$listeUser =$em->getRepository(User::class)->findAll();
+				foreach ($listeUser as $value){
+                    $data[]=[
+                        "Id"=>$value->getId(),
+                        "Nom"=>$value->getLastname(),
+                        "Prenom"=>$value->getFirstname(),
+                        "DateCreation"=>date_format($value->getCreationdate(),'Y-m-d H:i:s'),
+                        "DateModification"=>date_format($value->getUpdatedate(),'Y-m-d H:i:s'),
+                    ];
+				}
             }
         }else{
             $message='Erreur formulaire de suppression';
+            $data[]=[
+                'statut'=>0,
+                'message'=>"Erreur formulaire ",
+            ];
+        }
+        $logger = $this->get('logger');
+        $logger->info($message);
+        return new JsonResponse($data,200);
+    }
+
+    /**
+     * Recherche
+     * @Route("/api/recherche", name="api_search_utilisateur", methods={"GET"})
+     */
+    public function api_searche_userAction(Request $request)
+    {
+        $form=0;
+        $id=$request->get('PK');
+        if($id<>null) $form++;
+
+        if ($form == 1){
+            $em = $this->getDoctrine()->getManager();
+			$userExiste =$em->getRepository(User::class)->find($id);
+			if ($userExiste==null){
+				$verification=false;
+				$message="l'utilisateur n'existe pas";
+				$data[]=[
+					'statut'=>0,
+					'message'=>$message,
+				];
+			}
+			else{
+				$data[]=[
+					"Id"=>$userExiste->getId(),
+					"Nom"=>$userExiste->getLastname(),
+					"Prenom"=>$userExiste->getFirstname(),
+					"DateCreation"=>date_format($userExiste->getCreationdate(),'Y-m-d H:i:s'),
+					"DateModification"=>date_format($userExiste->getUpdatedate(),'Y-m-d H:i:s'),
+				];
+				return new JsonResponse($data,200);
+			}
+		}else{
+            $message='Erreur du formulaire';
             $data[]=[
                 'statut'=>0,
                 'message'=>"Erreur formulaire ",
